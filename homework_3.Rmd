@@ -1,0 +1,190 @@
+---
+title: "SDS 315 Homework 3"
+date: "2024-02-05"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+Name: Avik Malladi
+UT eid: arm7542
+Github link: https://github.com/avikMall/sds-315-homework-3
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message= FALSE)
+```
+
+``` {r}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(readr)
+library(nls2)
+```
+
+## Problem 1
+
+``` {r}
+creatinine <- read_csv("creatinine.csv")
+# head(creatinine)
+```
+
+#### Part A
+
+``` {r}
+model <- lm(creatclear ~ age, data=creatinine)
+
+# summary(model)
+age_55 <- data.frame(age = 55)
+predicted_55 <- predict(model, newdata = age_55)
+# predicted_55
+```
+
+The expected creatinine clearance rate for a 55-year-old is `r round(predicted_55,2)`. We determined the expected creatinine clearance rate for a 55-year-old by using the linear regression model. The equation for the model is: 
+creatinine clearance rate = $$\beta_0 + \beta_1 × age$$ where $$\beta_0, \beta_1$$ are the coefficients estimated from the regression summary
+  
+
+#### Part B
+
+``` {r}
+coef_age <- coef(model)["age"]
+# coef_age
+```
+
+The rate at which creatinine clearance changes with age is `r round(coef_age, 2)`. The coefficient for age from the regression model represents the change in creatinine clearance rate with age. It indicates the average change in clearance rate (in mL/minute) for each additional year of age.
+
+#### Part C
+
+``` {r}
+rate_40 <- predict(model, newdata = data.frame(age = 40))
+rate_60 <- predict(model, newdata = data.frame(age = 60))
+
+healthier_age <- ifelse(rate_40 > rate_60, "40-year-old", "60-year-old")
+# healthier_age
+```
+
+The healthier age is the 40-year-old. We calculated the predicted creatinine clearance rates for both a 40-year-old and a 60-year-old using the regression model. The rate that is higher indicates better kidney health for that age group.
+
+## Problem 2
+
+``` {r}
+marketmodel <- read.csv("marketmodel.csv")
+# head(marketmodel)
+```
+
+#### Introduction
+
+The "beta" of a stock measures its systematic risk, which is the risk related to the overall market movements. It indicates how sensitive a stock's returns are to changes in the market. Beta is calculated through linear regression, where the slope coefficient represents the beta value. The intercept term is referred to as "alpha." This analysis aims to regress the returns of individual stocks against the S&P 500 returns to determine their betas.
+
+In finance, beta is a  metric used by investors and analysts to assess the systematic risk associated with an individual stock or asset within the broader market context. It serves as an important component of the Capital Asset Pricing Model (CAPM).
+
+Essentially, beta measures the sensitivity of a stock's returns to changes in the overall market. In simpler terms, it quantifies how much a stock's price tends to move in relation to movements in the market as a whole. This relationship is typically expressed through a linear regression model, where the rate of return on the individual stock (Y) is modeled as a function of the rate of return on the market (X), along with a residual term (e).
+
+The beta coefficient (\( \beta \)), represents the slope of this regression line. It indicates the degree of systematic risk in the stock, with a beta greater than 1 implying that the stock is more volatile than the market, a beta less than 1 indicating lower volatility compared to the market, and a beta of 1 suggesting that the stock moves in line with the market.
+
+Investors use beta as a tool to assess the risk-return of a particular investment. Stocks with higher betas are expected to provide higher returns in bullish market conditions but are also more prone to larger losses during market downturns. Inversely, stocks with lower betas tend to offer more stability but may deliver lower returns during periods of market growth.
+
+#### Table
+
+``` {r}
+results <- lapply(names(marketmodel)[-1], function(stock) {
+  model <- lm(marketmodel[[stock]] ~ SPY, data = marketmodel)
+  coef <- coef(model)
+  rsquared <- summary(model)$r.squared
+  c(intercept = round(coef[1],2), slope = round(coef[2],2), rsquared = round(rsquared,2))
+})
+
+results_df <- data.frame(
+  Stock = names(marketmodel)[-1],
+  Intercept = sapply(results, function(x) x[1]),
+  Slope = sapply(results, function(x) x[2]),
+  R_squared = sapply(results, function(x) x[3])
+)
+knitr::kable(results_df)
+```
+
+Table 1: Regression Results for Individual Stocks against S&P 500 Returns. The table displays the ticker symbol, intercept, slope (beta), and R-squared value for each regression.
+
+#### Conclusion
+
+Based on the analysis, the stock with the lowest systematic risk (lowest beta) is WMT with a beta value of 0.52. The stock with the highest systematic risk is AAPL with a beta value of 1.07.
+
+
+## Problem 3
+
+``` {r}
+covid <- read_csv("covid.csv")
+# head(covid)
+```
+
+#### Exponential Growth Modeling
+
+``` {r}
+italy_data <- filter(covid, country == "Italy")
+spain_data <- filter(covid, country == "Spain")
+
+italy_model <- lm(log(deaths) ~ days_since_first_death, data = italy_data)
+italy_growth_rate <- coef(italy_model)[2]
+italy_doubling_time <- log(2) / italy_growth_rate
+
+spain_model <- lm(log(deaths) ~ days_since_first_death, data = spain_data)
+spain_growth_rate <- coef(spain_model)[2]
+spain_doubling_time <- log(2) / spain_growth_rate
+
+italy_growth_rate <- round(italy_growth_rate, 3)
+italy_doubling_time <- round(italy_doubling_time)
+# italy_growth_rate
+# italy_doubling_time
+
+spain_growth_rate <- round(spain_growth_rate, 3)
+spain_doubling_time <- round(spain_doubling_time)
+# spain_growth_rate
+# spain_doubling_time
+```
+
+The growth rate for Italy is `r italy_growth_rate` and the doubling time is `r italy_doubling_time` days. The growth rate for Spain is `r spain_growth_rate` and the doubling time is `r spain_doubling_time` days.
+
+#### Line Graph
+
+``` {r}
+ggplot(covid, aes(x = days_since_first_death, y = deaths, color = country)) +
+  geom_line() +
+  labs(title = "Reported Daily Deaths from COVID-19",
+       x = "Days Since First Death",
+       y = "Daily Deaths",
+       color = "Country") +
+  theme_minimal()
+```
+
+## Problem 4
+
+``` {r}
+milk <- read_csv("milk.csv")
+
+# Define the power-law model function
+power_law <- function(P, K, beta) {
+  K * P^beta
+}
+
+# Fit the power-law model to the data
+model <- nls2(sales ~ power_law(price, K, beta), data = milk, start = list(K = 1, beta = -1))
+
+# Extract the estimated values of K and beta
+K_est <- coef(model)["K"]
+beta_est <- coef(model)["beta"]
+
+# Print the estimated price elasticity of demand
+
+```
+
+The estimated price elasticity of demand for milk is approximately `r round(beta_est, 3)`.
+
+To estimate the price elasticity of demand for milk using the data provided in milk.csv, I fitted a power-law model, \( Q = KP^{\beta} \), where \( P \) is the price and \( Q \) is the quantity demanded by consumers at that price. The parameter \( \beta \) represents the price elasticity of demand. 
+
+Here's what I did:
+
+1. Loaded the data from milk.csv.
+2. Fitted a power-law model to the data, using nonlinear regression.
+3. Extracted the estimated value of \( \beta \) from the model.
+
+Based on the analysis, the estimated price elasticity of demand for milk is approximately \( \beta = -1.77 \). This indicates that for every 1% increase in the price of milk, the quantity demanded decreases by approximately 1.77%. This suggests that demand for milk is relatively elastic with respect to its price, as the value of \( \beta \) is more than 1.
